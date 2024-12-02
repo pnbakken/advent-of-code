@@ -9,45 +9,22 @@ import fetchUtil from "../../util/fetchUtil.js";
     const rawData = await fetchUtil(YEAR, DAY);
     console.log(rawData);
 
-    rawData.split("\n").forEach(function (line, i) {
+    rawData.split("\n").forEach((line) => {
       if (line) {
-        const chars = line.split(" ");
+        const numbers = line.split(" ").map(Number); // Parse line into numbers
 
-        let increase = false;
-        let decrease = false;
-        let safe = false;
+        // Generate subsets
+        const subsets = numbers.map((_, index) =>
+          numbers.filter((_, i) => i !== index)
+        );
 
-        const numbers = [];
+        // Check if the set is safe
+        let safe = checkIfSetSafe(numbers);
 
-        chars.forEach(function (c, j) {
-          numbers.push(Number(c));
-        });
-
-        console.log(numbers);
-
-        const subsets = [];
-        numbers.forEach(function (c, j) {
-          subsets.push(
-            numbers.filter(function (n, y) {
-              return y !== j;
-            })
-          );
-        });
-
-        safe = checkIfSetSafe(numbers);
-        console.log("Set is safe: ", safe);
-
+        // If not safe, check subsets
         if (!safe) {
-          subsets.every(function (s, j) {
-            safe = checkIfSetSafe(s);
-            if (safe) {
-              return false;
-            }
-          });
+          safe = subsets.some((subset) => checkIfSetSafe(subset));
         }
-
-        console.log(`Sequence is ${safe ? "safe" : "NOT SAFE"}`);
-        console.log("--------------------");
 
         if (safe) {
           sum += 1;
@@ -63,59 +40,24 @@ import fetchUtil from "../../util/fetchUtil.js";
 })();
 
 function checkIfSetSafe(set) {
-  let increase = false;
-  let decrease = false;
-  let safeSet = false;
+  let increasing = true;
+  let decreasing = true;
 
-  set.every(function (c, j) {
-    if (j === 0) {
-      return true;
-    } else {
-      if (c === set[j - 1]) {
-        safeSet = false;
-        return false;
-      }
+  for (let i = 1; i < set.length; i++) {
+    const diff = set[i] - set[i - 1];
 
-      if (c > set[j - 1]) {
-        if (decrease) {
-          safeSet = false;
-          return false;
-        } else {
-          increase = true;
-
-          if (c - set[j - 1] <= 3) {
-            safeSet = true;
-            return true;
-          } else {
-            safeSet = false;
-            return false;
-          }
-        }
-      }
-      if (c < set[j - 1]) {
-        if (increase) {
-          safeSet = false;
-          return false;
-        } else {
-          decrease = true;
-
-          if (set[j - 1] - c <= 3) {
-            safeSet = true;
-            return true;
-          } else {
-            safeSet = false;
-            return false;
-          }
-        }
-      }
+    // Check adjacent difference constraint
+    if (Math.abs(diff) < 1 || Math.abs(diff) > 3) {
+      return false; // Immediately unsafe if any diff is out of range
     }
-  });
 
-  console.log(
-    `Sequence is ${increase ? "increasing" : decrease ? "decreasing" : "NULL"}`
-  );
-  if (safeSet) {
-    console.log("Safe set", set);
-    return true;
+    // Track if the sequence is consistently increasing or decreasing
+    if (diff > 0) {
+      decreasing = false; // Not decreasing if there's an increase
+    } else if (diff < 0) {
+      increasing = false; // Not increasing if there's a decrease
+    }
   }
+
+  return increasing || decreasing;
 }
